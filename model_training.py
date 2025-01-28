@@ -8,19 +8,15 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import joblib
 import statistics as stats
 import time
+import os
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 class StockPricePredictor(nn.Module):
     def __init__(self, input_size):
         super(StockPricePredictor, self).__init__()
-        
-        self.ltsm = nn.LSTM(
-            input_size=input_size,
-            hidden_size=64,
-            num_layers=2,
-            batch_first=True,
-            dropout=0.2
-        )
-        
+     
         self.fc1 = nn.Linear(input_size, 64)
         self.relu1 = nn.ReLU()
         self.fc2 = nn.Linear(64, 32)
@@ -29,25 +25,7 @@ class StockPricePredictor(nn.Module):
         self.relu3 = nn.ReLU()
         self.fc4 = nn.Linear(16, 1)
     
-    def forward(self, x, lengths=None):
-        
-        if len(x.shape) == 2:
-            x = x.view(-1, self.sequence_length, self.input_size)
-        
-        if lengths is not None:
-            # Pack the padded sequence
-            packed_x = nn.utils.rnn.pack_padded_sequence(
-                x, lengths.cpu(), batch_first=True, enforce_sorted=False
-            )
-            
-            packed_lstm_out, _ = self.lstm(packed_x)
-            
-            lstm_out, _ = nn.utils.rnn.pad_packed_sequence(
-                packed_lstm_out, batch_first=True
-            )
-        else:
-            lstm_out, _ = self.lstm(x)
-            
+    def forward(self, x):
             
         x = self.fc1(x)
         x = self.relu1(x)
@@ -61,10 +39,10 @@ class StockPricePredictor(nn.Module):
 
 class StockPrice_Model:
     
-    def __init__(self, model, lr=0.001, epoch=25, batch_size=64, l2_lam=0.1):
+    def __init__(self, model, lr=0.001, epochs=25, batch_size=64, l2_lam=0.1):
         self.model = model
         self.lr = lr
-        self.epoch = epoch
+        self.epochs = epochs
         self.batch_size = batch_size
         self.l2_lam = l2_lam
         
@@ -95,7 +73,7 @@ class StockPrice_Model:
             
             # L2 regularization
             l2_reg = sum(param.norm(2) for param in self.model.parameters())
-            loss += self.l2_lambda * l2_reg
+            loss += self.l2_lam * l2_reg
             
             epoch_loss += loss.item()
             
@@ -118,6 +96,33 @@ class StockPrice_Model:
                 time.sleep(45)
                 
             print(f"Epoch {epoch + 1}/{self.epochs}, Average Loss: {avg_loss:.2f}")
+    
+    def save_model(self, file_name='model.pt'):
+        path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+        
+        if not os.path.exists(path):
+            os.makedirs(path)
+            
+        full_path = os.path.join(path, file_name)
+        torch.save(self.model, full_path)
+        print(f'Model saved to {full_path}')
+        
+    
+    def load_model(self, file_name='model.pt'):
+        
+        path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+        
+        full_path = os.path.join(path, file_name)
+        self.model = torch.load(full_path)
+        self.model.eval()
+        print('Model loaded successfully')
+    
+    def predict(self, X):
+        
+        self.model.eval()
+        with torch.no_grad():
+            predictions = self.model(X)
+        return predictions
         
 
 def create_sequences(data, target, seq_length):
@@ -129,13 +134,15 @@ def create_sequences(data, target, seq_length):
         
     return np.array(X), np.array(y)
 
-def scale_features(X, y,feature_columns):
+def scale_features(data,feature_columns, target_feature):
     feature_scaler = StandardScaler()
-    features = X[feature_columns]
-    scaled_features = feature_scaler.fit_transform(features)
+    features = data[feature_columns]
+    scaled_x = feature_scaler.fit_transform(features)
 
     target_scaler = MinMaxScaler()
-    scaled_target = target_scaler.fit_transform([y])
+    scaled_y = target_scaler.fit_transform(data[target_feature])
+    
+    return scaled_x, scaled_y
 
 def check_data_quality(df):
   
