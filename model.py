@@ -17,37 +17,54 @@ class StockPricePredictor(nn.Module):
     def __init__(self, input_size):
         super(StockPricePredictor, self).__init__()
      
-        self.fc1 = nn.Linear(input_size, 64)
-        self.relu1 = nn.ReLU()
-        self.fc2 = nn.Linear(64, 32)
-        self.relu2 = nn.LeakyReLU()
-        self.fc3 = nn.Linear(32, 16)
-        self.relu3 = nn.ReLU()
-        self.fc4 = nn.Linear(16, 1)
+        self.fc1 = nn.Linear(input_size, 128)
+        self.act1 = nn.LeakyReLU(0.01)
+        self.dropout1 = nn.Dropout(p=0.25)
+        self.fc2 = nn.Linear(128, 64)
+        self.act2 = nn.LeakyReLU(0.01)
+        self.dropout2 = nn.Dropout(p=0.35)
+        self.fc3 = nn.Linear(64, 32)
+        self.act3 = nn.LeakyReLU(0.01)
+        self.dropout3 = nn.Dropout(p=0.25)
+        self.fc4 = nn.Linear(32, 32)
+        self.act4 = nn.LeakyReLU(0.01)
+        self.dropout4 = nn.Dropout(p=0.25)
+        self.fc5 = nn.Linear(32,16)
+        self.act5 = nn.LeakyReLU(0.01)
+        self.fc6 = nn.Linear(16,1)
     
     def forward(self, x):
             
         x = self.fc1(x)
-        x = self.relu1(x)
+        x = self.act1(x)
+        x = self.dropout1(x)
         x = self.fc2(x)
-        x = self.relu2(x)
+        x = self.act2(x)
+        x = self.dropout2(x)
         x = self.fc3(x)
-        x = self.relu3(x)
+        x = self.act3(x)
+        x = self.dropout3(x)
         x = self.fc4(x)
+        x = self.act4(x)
+        x = self.dropout4(x)
+        x = self.fc5(x)
+        x = self.act5(x)
+        x = self.fc6(x)
         return x
 
 
 class StockPrice_Model:
     
-    def __init__(self, model, lr=0.001, epochs=25, batch_size=64, l2_lam=0.1):
+    def __init__(self, model=None, lr=0.001, epochs=25, batch_size=64, l2_lam=0.1):
         self.model = model
         self.lr = lr
         self.epochs = epochs
         self.batch_size = batch_size
         self.l2_lam = l2_lam
         
-        self.metric = nn.MSELoss()
-        self.optimizer = optim.Adam(model.parameters(), lr=lr)
+        if model is not None:
+            self.metric = nn.SmoothL1Loss()
+            self.optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=l2_lam)
         
         self.train_losses = []
         self.val_losses = []
@@ -70,10 +87,6 @@ class StockPrice_Model:
             y_batch = y_batch.view(-1, 1)
             predictions = self.model(X_batch)
             loss = self.metric(predictions, y_batch)
-            
-            # L2 regularization
-            l2_reg = sum(param.norm(2) for param in self.model.parameters())
-            loss += self.l2_lam * l2_reg
             
             epoch_loss += loss.item()
             

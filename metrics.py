@@ -1,9 +1,6 @@
 import pandas as pd
 import numpy as np
 
-import pandas as pd
-import numpy as np
-
 def calculate_returns(stock_data):
     return stock_data['Adj Close'].pct_change()
 
