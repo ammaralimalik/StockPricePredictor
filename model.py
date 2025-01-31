@@ -18,17 +18,13 @@ class StockPricePredictor(nn.Module):
         super(StockPricePredictor, self).__init__()
      
         self.fc1 = nn.Linear(input_size, 128)
-        self.act1 = nn.ReLU()
-        self.dropout1 = nn.Dropout(p=0.25)
+        self.act1 = nn.LeakyReLU()
         self.fc2 = nn.Linear(128, 64)
         self.act2 = nn.LeakyReLU()
-        self.dropout2 = nn.Dropout(p=0.35)
         self.fc3 = nn.Linear(64, 32)
         self.act3 = nn.LeakyReLU()
-        self.dropout3 = nn.Dropout(p=0.25)
         self.fc4 = nn.Linear(32, 32)
         self.act4 = nn.LeakyReLU()
-        self.dropout4 = nn.Dropout(p=0.25)
         self.fc5 = nn.Linear(32,16)
         self.act5 = nn.LeakyReLU()
         self.fc6 = nn.Linear(16,1)
@@ -37,22 +33,21 @@ class StockPricePredictor(nn.Module):
             
         x = self.fc1(x)
         x = self.act1(x)
-        x = self.dropout1(x)
         x = self.fc2(x)
         x = self.act2(x)
-        x = self.dropout2(x)
         x = self.fc3(x)
         x = self.act3(x)
-        x = self.dropout3(x)
         x = self.fc4(x)
         x = self.act4(x)
-        x = self.dropout4(x)
         x = self.fc5(x)
         x = self.act5(x)
         x = self.fc6(x)
         return x
 
-
+class MAPELoss(nn.Module):
+    def forward(self, pred, target):
+        return torch.mean(torch.abs((target - pred) / (target + 1e-6))) * 100
+    
 class StockPrice_Model:
     
     def __init__(self, model=None, lr=0.001, epochs=25, batch_size=64, l2_lam=0.1):
@@ -63,7 +58,7 @@ class StockPrice_Model:
         self.l2_lam = l2_lam
         
         if model is not None:
-            self.metric = nn.SmoothL1Loss()
+            self.metric = MAPELoss()
             self.optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=l2_lam)
         
         self.train_losses = []
