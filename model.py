@@ -10,6 +10,7 @@ import statistics as stats
 import time
 import os
 import warnings
+import joblib
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
@@ -22,7 +23,7 @@ class StockPricePredictor(nn.Module):
         self.fc2 = nn.Linear(128, 64)
         self.act2 = nn.LeakyReLU()
         self.fc3 = nn.Linear(64, 32)
-        self.act3 = nn.LeakyReLU()
+        self.act3 = nn.ReLU()
         self.fc4 = nn.Linear(32, 32)
         self.act4 = nn.LeakyReLU()
         self.fc5 = nn.Linear(32,16)
@@ -70,7 +71,7 @@ class StockPrice_Model:
         self.train_loader = torch.utils.data.DataLoader(
             train_dataset, 
             batch_size=self.batch_size, 
-            shuffle=True, 
+            shuffle=False, 
             drop_last=True
         )
     
@@ -127,9 +128,11 @@ class StockPrice_Model:
     
     def predict(self, X):
         
+        x_tensor = torch.tensor(X, dtype=torch.float32)
+    
         self.model.eval()
         with torch.no_grad():
-            predictions = self.model(X)
+            predictions = self.model(x_tensor)
         return predictions
         
 
@@ -142,7 +145,7 @@ def create_sequences(data, target, seq_length):
         
     return np.array(X), np.array(y)
 
-def scale_features(data,feature_columns, target_feature):
+def train_scale_features(data,feature_columns, target_feature):
     feature_scaler = StandardScaler()
     features = data[feature_columns]
     scaled_x = feature_scaler.fit_transform(features)
@@ -150,7 +153,23 @@ def scale_features(data,feature_columns, target_feature):
     target_scaler = MinMaxScaler()
     scaled_y = target_scaler.fit_transform(data[target_feature])
     
+    scaler_path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+    joblib.dump(feature_scaler, os.path.join(scaler_path,'feature_scaler.pkl'))
+    joblib.dump(target_scaler, os.path.join(scaler_path,'target_scaler.pkl'))
+    
     return scaled_x, scaled_y
+
+def scale_features(data):
+    scaler_path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+    feature_scaler = joblib.load(os.path.join(scaler_path, 'feature_scaler.pkl'))
+    scaled_x = feature_scaler.transform(data)
+    return scaled_x
+
+def unscale_predictions(predictions):
+    scaler_path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+    target_scaler = joblib.load(os.path.join(scaler_path, 'target_scaler.pkl'))
+    predictions_reshaped = predictions.reshape(-1, 1)
+    return target_scaler.inverse_transform(predictions_reshaped).flatten()
 
 def check_data_quality(df):
   

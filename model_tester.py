@@ -3,14 +3,21 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
 from scipy import stats
-from model import StockPrice_Model, scale_features
+from model import StockPrice_Model, scale_features, train_scale_features
 from sklearn.model_selection import train_test_split
 import metrics
 import torch
+import warnings
+import os
+warnings.filterwarnings("ignore")
+
 
 class ModelTester:
     def __init__(self, model):
         self.model = model
+        self.save_path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/model_artifacts'
+        # Create directory if it doesn't exist
+        os.makedirs(self.save_path, exist_ok=True)
         
     def calculate_metrics(self, y_true, y_pred):
         """
@@ -53,6 +60,12 @@ class ModelTester:
         plt.ylabel('Price')
         plt.legend()
         plt.grid(True)
+        
+        # Save the plot
+        save_path = os.path.join(self.save_path, 'actual_vs_predicted.png')
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved predictions plot to {save_path}")
+        
         plt.show()
         
     def plot_regression(self, y_true, y_pred):
@@ -79,6 +92,12 @@ class ModelTester:
                 '--', color='gray', label='Perfect Prediction')
         
         plt.grid(True)
+        
+        # Save the plot
+        save_path = os.path.join(self.save_path, 'regression_plot.png')
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved regression plot to {save_path}")
+        
         plt.show()
     
     def plot_residuals(self, y_true, y_pred):
@@ -94,6 +113,12 @@ class ModelTester:
         plt.xlabel('Predicted Values')
         plt.ylabel('Residuals')
         plt.grid(True)
+        
+        # Save the plot
+        save_path = os.path.join(self.save_path, 'residual_plot.png')
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved residual plot to {save_path}")
+        
         plt.show()
         
         # Plot residual distribution
@@ -103,6 +128,12 @@ class ModelTester:
         plt.xlabel('Residual Value')
         plt.ylabel('Frequency')
         plt.grid(True)
+        
+        # Save the plot
+        save_path = os.path.join(self.save_path, 'residual_distribution.png')
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved residual distribution plot to {save_path}")
+        
         plt.show()
 
 # Example usage code:
@@ -134,50 +165,28 @@ def test_model(X_test, y_test, model_path):
     tester.plot_regression(y_test.numpy().flatten(), predictions.numpy().flatten())
     tester.plot_residuals(y_test.numpy().flatten(), predictions.numpy().flatten())
     
+    # Save metrics to file
+    metrics_df = pd.DataFrame([metrics])
+    metrics_save_path = os.path.join(tester.save_path, 'model_metrics.csv')
+    metrics_df.to_csv(metrics_save_path, index=False)
+    print(f"Saved metrics to {metrics_save_path}")
+    
     print('Testing Completed')
     return metrics, predictions
 
 
+stock_data = pd.read_csv('data/indexProcessed.csv')
+stock_data = metrics.calculate_all_features(stock_data)
 
-num_days = 150
-symbols = ["AAPL", "TSLA", "GOOGL", "AMZN", "MSFT", "NFLX", "NVDA", "META", "AMD", "IBM"]
-dates = pd.date_range(start="2024-01-01", periods=num_days, freq="D")
+feature_columns = ['Open','High','Low','Volume','Returns','MA10', 'MA50', 'RSI', 'ATR', 'Volume_Norm', 'Volatility']
+target_feature = ['Close']
 
-# Generate random stock data for 45 days
-data = []
-np.random.seed(42)  # Ensure reproducibility
-
-for symbol in symbols:
-    open_prices = np.round(np.random.uniform(100, 300, size=num_days), 2)
-    high_prices = open_prices + np.round(np.random.uniform(0, 10, size=num_days), 2)
-    low_prices = open_prices - np.round(np.random.uniform(0, 10, size=num_days), 2)
-    close_prices = np.round(np.random.uniform(low_prices, high_prices), 2)
-    adj_close_prices = close_prices * np.round(np.random.uniform(0.98, 1.02, size=num_days), 2)
-    volumes = np.random.randint(1000000, 10000000, size=num_days)
-
-    for i in range(num_days):
-        data.append([symbol, dates[i], open_prices[i], high_prices[i], low_prices[i],
-                     close_prices[i], np.round(adj_close_prices[i], 2), volumes[i]])
-
-# Create DataFrame
-stock_data_extended = pd.DataFrame(data, columns=["Index", "Date", "Open", "High", "Low", 
-                                                  "Close", "Adj Close", "Volume"])
-
-stock_data_extended.head()  # Display first few rows for verification
-
-stock_data = metrics.calculate_all_features(stock_data_extended)
-
-feature_columns = ['Open','High','Low','Close','Volume','Returns','MA10', 'MA50', 'RSI', 'ATR', 'Volume_Norm', 'Volatility']
-target_feature = ['Adj Close']
-
-print(stock_data)
-
-X, y = scale_features(stock_data, feature_columns, target_feature)
+X, y = train_scale_features(stock_data, feature_columns, target_feature)
 
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
-    test_size=0.3,
+    test_size=0.95,
     shuffle=False
 )
 
