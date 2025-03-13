@@ -107,7 +107,7 @@ class StockPrice_Model:
             print(f"Epoch {epoch + 1}/{self.epochs}, Average Loss: {avg_loss:.2f}")
     
     def save_model(self, file_name='model.pt'):
-        path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+        path = '/saved_models/'
         
         if not os.path.exists(path):
             os.makedirs(path)
@@ -119,7 +119,7 @@ class StockPrice_Model:
     
     def load_model(self, file_name='model.pt'):
         
-        path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+        path = '/saved_models/'
         
         full_path = os.path.join(path, file_name)
         self.model = torch.load(full_path)
@@ -153,20 +153,20 @@ def train_scale_features(data,feature_columns, target_feature):
     target_scaler = MinMaxScaler()
     scaled_y = target_scaler.fit_transform(data[target_feature])
     
-    scaler_path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+    scaler_path = '/saved_models/'
     joblib.dump(feature_scaler, os.path.join(scaler_path,'feature_scaler.pkl'))
     joblib.dump(target_scaler, os.path.join(scaler_path,'target_scaler.pkl'))
     
     return scaled_x, scaled_y
 
 def scale_features(data):
-    scaler_path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+    scaler_path = '/saved_models/'
     feature_scaler = joblib.load(os.path.join(scaler_path, 'feature_scaler.pkl'))
     scaled_x = feature_scaler.transform(data)
     return scaled_x
 
 def unscale_predictions(predictions):
-    scaler_path = '/Users/ammarmalik/Desktop/ResumeProjects/StockPricePredictor/saved_models/'
+    scaler_path = '/saved_models/'
     target_scaler = joblib.load(os.path.join(scaler_path, 'target_scaler.pkl'))
     predictions_reshaped = predictions.reshape(-1, 1)
     return target_scaler.inverse_transform(predictions_reshaped).flatten()
