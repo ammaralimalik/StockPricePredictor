@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
 from scipy import stats
-from model import StockPrice_Model, scale_features, train_scale_features
+from model import StockPrice_Model, train_scale_features
 from sklearn.model_selection import train_test_split
 import metrics
 import torch

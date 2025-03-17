@@ -30,7 +30,7 @@ y_test_tensor = torch.tensor(y_test, dtype=torch.float32)
 nn_model = StockPrice_Model(
     model=StockPricePredictor(len(feature_columns)),
     lr=0.0001,
-    epochs=100,
+    epochs=50,
     batch_size=64,
     l2_lam=0.001
 )
